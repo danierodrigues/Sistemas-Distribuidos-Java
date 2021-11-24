@@ -1,43 +1,21 @@
-import java.net.*;
-import java.io.*;
-import java.nio.ByteBuffer;
+import java.rmi.Naming;
+import java.rmi.RemoteException;
 import java.util.UUID;
 
 public class Client {
 
     public static void main(String[] args) {
-        DatagramSocket aSocket = null;
+        ScriptListInterface l = null;
+        try{
+            l  = (ScriptListInterface) Naming.lookup("rmi://localhost:2022/scripts");
+            Script script = new Script("cmd /c dir");
+            UUID uuidOfScript = l.submitScript(script);
 
-        try {
-            aSocket = new DatagramSocket();
+            System.out.println(uuidOfScript);
+        } catch(RemoteException e) {
+            System.out.println(e.getMessage());
+        }catch(Exception e) {e.printStackTrace();}
 
-            byte [] m = "cmd /c dir".getBytes();
-            InetAddress aHost = InetAddress.getByName("localhost");
-            int serverPort = 6789;
-
-            DatagramPacket request = new DatagramPacket(m,  m.length, aHost, serverPort);
-
-            aSocket.send(request);
-
-            byte[] buffer = new byte[1000];
-
-            DatagramPacket reply = new DatagramPacket(buffer, buffer.length);
-
-            aSocket.receive(reply);
-
-            UUID uuid = asUuid(reply.getData());
-            System.out.println(uuid);
-
-
-        }catch (SocketException e){System.out.println("Socket: " + e.getMessage());
-        }catch (IOException e){System.out.println("IO: " + e.getMessage());
-        }finally {if(aSocket != null) aSocket.close();}
     }
 
-    public static UUID asUuid(byte[] bytes) {
-        ByteBuffer bb = ByteBuffer.wrap(bytes);
-        long firstLong = bb.getLong();
-        long secondLong = bb.getLong();
-        return new UUID(firstLong, secondLong);
-    }
 }
