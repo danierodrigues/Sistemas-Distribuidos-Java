@@ -1,20 +1,20 @@
-import java.io.File;
-import java.io.IOException;
-import java.net.DatagramPacket;
-import java.net.DatagramSocket;
-import java.net.SocketException;
-import java.nio.ByteBuffer;
+import java.io.BufferedReader;
+import java.io.FileReader;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
-import java.util.LinkedList;
-import java.util.Queue;
-import java.util.UUID;
+import java.util.List;
+import java.util.stream.Collectors;
 
 public class Processor {
+    public static String server = "127.0.0.1";
+    public static int port = 21;
+    public static String user;
+    public static String password;
 
     public static void main(String[] args) {
         Registry r = null;
+        List<String> credentialsList;
 
         try{
             r = LocateRegistry.createRegistry(2022);
@@ -23,6 +23,15 @@ public class Processor {
         }
 
         try{
+            try (BufferedReader br = new BufferedReader(new FileReader("../../credentials.txt"))) {
+                credentialsList = br.lines().collect(Collectors.toList());
+            }
+
+            user = credentialsList.get(0);
+            password = credentialsList.get(1);
+                FtpClient ftpClient = new FtpClient( server, port, user,password);
+            r.rebind("ftpClient", ftpClient);
+
             ScriptManager scriptList = new ScriptManager();
             r.rebind("scripts", scriptList );
 
