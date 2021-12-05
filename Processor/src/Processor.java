@@ -23,21 +23,22 @@ public class Processor {
         }
 
         try{
+            // Read credentials to use the FTP Server
             try (BufferedReader br = new BufferedReader(new FileReader("../../credentials.txt"))) {
                 credentialsList = br.lines().collect(Collectors.toList());
             }
 
             user = credentialsList.get(0);
             password = credentialsList.get(1);
-                FtpClient ftpClient = new FtpClient( server, port, user,password);
+            FtpClient ftpClient = new FtpClient( server, port, user,password);
             r.rebind("ftpClient", ftpClient);
 
             ScriptManager scriptList = new ScriptManager();
             r.rebind("scripts", scriptList );
 
-            System.out.println("Place server ready");
+            System.out.println("Processor server ready");
         }catch(Exception e) {
-            System.out.println("Place server main " + e.getMessage());
+            System.out.println("Processor server main " + e.getMessage());
         }
 
 
