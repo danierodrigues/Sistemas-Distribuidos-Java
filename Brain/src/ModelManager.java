@@ -19,6 +19,7 @@ public class ModelManager extends UnicastRemoteObject implements ModelManagerInt
                 return model;
             }
         }
+        System.out.println("Modelo não encontrado.");
         return null;
     }
 }
