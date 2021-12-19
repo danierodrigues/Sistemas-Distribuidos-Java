@@ -3,17 +3,12 @@
     <output-path>$PROJECT_DIR$/out/artifacts/ProcessorOutput</output-path>
     <root id="archive" name="ProcessorOutput.jar">
       <element id="module-output" name="Processor" />
-      <element id="file-copy" path="$PROJECT_DIR$/../Stabilizer/out/production/Stabilizer/Heartbeat.class" />
       <element id="file-copy" path="$PROJECT_DIR$/../Stabilizer/out/production/Stabilizer/Stabilizer.class" />
       <element id="file-copy" path="$PROJECT_DIR$/../Stabilizer/out/production/Stabilizer/StabilizerManager.class" />
       <element id="file-copy" path="$PROJECT_DIR$/../Stabilizer/out/production/Stabilizer/StabilizerManagerInterface.class" />
       <element id="file-copy" path="$PROJECT_DIR$/../Brain/out/production/Brain/Brain.class" />
-      <element id="file-copy" path="$PROJECT_DIR$/../Brain/out/production/Brain/Model.class" />
       <element id="file-copy" path="$PROJECT_DIR$/../Brain/out/production/Brain/ModelManager.class" />
       <element id="file-copy" path="$PROJECT_DIR$/../Brain/out/production/Brain/ModelManagerInterface.class" />
-      <element id="file-copy" path="$PROJECT_DIR$/../Registry/out/production/Registry/AddressRegistry.class" />
-      <element id="file-copy" path="$PROJECT_DIR$/../Registry/out/production/Registry/AddressRegistryInterface.class" />
-      <element id="file-copy" path="$PROJECT_DIR$/../Registry/out/production/Registry/RegistryMain.class" />
     </root>
   </artifact>
 </component>

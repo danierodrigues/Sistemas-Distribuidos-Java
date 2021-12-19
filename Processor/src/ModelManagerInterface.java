@@ -1,3 +1,5 @@
+import models.Model;
+
 import java.rmi.Remote;
 import java.rmi.RemoteException;
 import java.util.UUID;

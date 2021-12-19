@@ -1,14 +1,16 @@
+package models;
+
 import java.io.Serializable;
 import java.util.UUID;
 
 public class Model implements Serializable {
     private UUID processID;
-    private UUID processorID;
+    private String processorAddress;
     private String model;
 
-    public Model( UUID processID, UUID processorID, String model){
+    public Model(UUID processID, String processorAddress, String model){
         this.processID = processID;
-        this.processorID = processorID;
+        this.processorAddress = processorAddress;
         this.model = model;
     }
 
@@ -21,12 +23,12 @@ public class Model implements Serializable {
         this.model = model;
     }
 
-    public UUID getProcessorID() {
-        return processorID;
+    public String getProcessorID() {
+        return processorAddress;
     }
 
-    public void setProcessorID(UUID processorID) {
-        this.processorID = processorID;
+    public void setProcessorID(String processorID) {
+        this.processorAddress = processorID;
     }
 
     public UUID getProcessID() {
