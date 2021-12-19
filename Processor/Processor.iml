@@ -21,6 +21,16 @@
         </SOURCES>
         <jarDirectory url="file://$MODULE_DIR$/../../../../../commons-net-3.8.0" recursive="false" />
         <jarDirectory url="file://$MODULE_DIR$/../../../../../commons-net-3.8.0" recursive="false" type="SOURCES" />
+        <jarDirectory url="file://$MODULE_DIR$/../../../../../commons-net-3.8.0" recursive="false" type="SOURCES" />
+      </library>
+    </orderEntry>
+    <orderEntry type="module-library" exported="">
+      <library>
+        <CLASSES>
+          <root url="jar://$MODULE_DIR$/../Models&amp;Utils/out/artifacts/Models/Models.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES />
       </library>
     </orderEntry>
   </component>

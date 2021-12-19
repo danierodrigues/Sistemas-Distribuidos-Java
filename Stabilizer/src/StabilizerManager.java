@@ -1,19 +1,24 @@
+import models.ProcessorHeartbeat;
+
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.net.DatagramPacket;
 import java.net.InetAddress;
 import java.net.MulticastSocket;
+import java.rmi.Naming;
+import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
 import java.rmi.server.UnicastRemoteObject;
+import java.time.LocalDateTime;
 import java.util.HashMap;
-import java.util.UUID;
 
 public class StabilizerManager extends UnicastRemoteObject implements StabilizerManagerInterface{
-    private HashMap<UUID,Heartbeat> processorsAvailable = new HashMap<>();
+    private HashMap<String, ProcessorHeartbeat> processorsAvailable = new HashMap<>();
     private Thread multicastReceiver;
     protected MulticastSocket socket = null;
-    protected byte[] buf = new byte[256];
+    protected byte[] buf = new byte[1024];
+    private long timeDiffer = 30;
 
     protected StabilizerManager() throws RemoteException {
 
@@ -29,17 +34,16 @@ public class StabilizerManager extends UnicastRemoteObject implements Stabilizer
                     byte[] bufPacket = packet.getData();
                     ByteArrayInputStream in = new ByteArrayInputStream(bufPacket);
                     ObjectInputStream is = new ObjectInputStream(in);
-                    Heartbeat messageClass = (Heartbeat) is.readObject();
+                    Object messageClass = is.readObject();
 
-                    manageHeartbeatsProcessors(messageClass);
-
-                    if ("end".equals(bufPacket.toString())) {
-                        break;
+                    if(messageClass instanceof ProcessorHeartbeat){
+                        manageHeartbeatsProcessors((ProcessorHeartbeat) messageClass);
                     }
+
+                    removeOutdatedProcessors();
+
                 }
-                socket.leaveGroup(group);
-                socket.close();
-            } catch (IOException | ClassNotFoundException e) {
+            } catch (IOException | ClassNotFoundException | NotBoundException e) {
                 e.printStackTrace();
             }
 
@@ -48,22 +52,39 @@ public class StabilizerManager extends UnicastRemoteObject implements Stabilizer
 
     }
 
-    public UUID bestProcessor(){
-        double bestPerformanceValue = 0;
-        UUID keyProcessor = null;
-        for (UUID key : processorsAvailable.keySet()) {
-            double performance = (100 - processorsAvailable.get(key).getCpuUsage()) / (processorsAvailable.get(key).getRequestsInQueue() == 0 ? 1 : processorsAvailable.get(key).getRequestsInQueue());
-            if(bestPerformanceValue < performance ){
-                keyProcessor = key;
-                bestPerformanceValue = performance;
+    public String bestProcessor(){
+        double bestPerformanceValue = 100;
+        String addressProcessor = null;
+        for (String key : processorsAvailable.keySet()) {
+            if(bestPerformanceValue > processorsAvailable.get(key).getCpuUsage() ){
+                addressProcessor = key;
+                bestPerformanceValue = processorsAvailable.get(key).getCpuUsage();
             }
         }
-        if(keyProcessor == null) return null;
-        return keyProcessor;
+        if(addressProcessor == null) return null;
+        return addressProcessor;
     };
 
-    protected void manageHeartbeatsProcessors(Heartbeat heartbeat){
-        processorsAvailable.put(heartbeat.getId(), heartbeat);
+    private void manageHeartbeatsProcessors(ProcessorHeartbeat heartbeat){
+        if (heartbeat.getType().equals("setup") || heartbeat.getType().equals("heartbeat")) {
+            processorsAvailable.put(heartbeat.getAddress(), heartbeat);
+        }
+
+    }
+
+    private void removeOutdatedProcessors() throws IOException, NotBoundException {
+        for (String address : processorsAvailable.keySet()) {
+            if (processorsAvailable.get(address).getTime().plusSeconds(this.timeDiffer).isBefore(LocalDateTime.now())) { //If heartbeat time more timeDiffer.value is before than now
+                sendRequestsToBestProcessor(address);
+                processorsAvailable.remove(address);
+                break;
+            }
+        }
+    }
+
+    private void sendRequestsToBestProcessor(String processorAddress) throws IOException, NotBoundException {
+        ScriptListInterface bestProcessor  = (ScriptListInterface) Naming.lookup(bestProcessor());
+        bestProcessor.resumeScripts(processorAddress);
     }
 
 }

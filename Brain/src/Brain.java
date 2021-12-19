@@ -3,11 +3,14 @@ import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 
 public class Brain {
+    public static int brainPort;
+
     public static void main(String[] args) {
         Registry r = null;
+        brainPort = Integer.parseInt(args[0]);
 
         try{
-            r = LocateRegistry.createRegistry(2023);
+            r = LocateRegistry.createRegistry(brainPort);
         }catch(RemoteException a){
             a.printStackTrace();
         }

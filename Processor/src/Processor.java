@@ -21,7 +21,7 @@ public class Processor {
         Registry r = null;
         List<String> credentialsList;
         processorPort = Integer.parseInt(args[0]);
-        AddressRegistryInterface registry = null;
+        //AddressRegistryInterface registry = null;
         try{
             r = LocateRegistry.createRegistry(processorPort);
         }catch(RemoteException a){
@@ -44,8 +44,8 @@ public class Processor {
 
             System.out.println("Processor server ready with the port: " + processorPort + ", with ProcessorID: " + processorID);
 
-            registry  = (AddressRegistryInterface) Naming.lookup("rmi://localhost:2029/registry");
-            registry.addAddress(processorID, "rmi://localhost:" + processorPort + "/scripts");
+            //registry  = (AddressRegistryInterface) Naming.lookup("rmi://localhost:2029/registry");
+            //registry.addAddress(processorID, "rmi://localhost:" + processorPort + "/scripts");
         }catch(Exception e) {
             System.out.println("Processor server main " + e.getMessage());
         }
