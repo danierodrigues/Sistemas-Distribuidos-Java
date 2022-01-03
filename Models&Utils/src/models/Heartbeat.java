@@ -28,11 +28,7 @@ public abstract class Heartbeat implements Serializable {
     public void setAddress(String address) {this.address = address;}
 
 
-    public LocalDateTime getTime() {
-        return time;
-    }
+    public LocalDateTime getTime() {return time; }
 
-    public void setTime(LocalDateTime time) {
-        this.time = time;
-    }
+    public void setTime(LocalDateTime time) {this.time = time;}
 }

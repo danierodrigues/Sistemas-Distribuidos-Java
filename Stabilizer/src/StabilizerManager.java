@@ -1,4 +1,5 @@
 import models.ProcessorHeartbeat;
+import utils.HeartbeatsUtils;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -11,20 +12,18 @@ import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
 import java.rmi.server.UnicastRemoteObject;
 import java.time.LocalDateTime;
-import java.util.HashMap;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class StabilizerManager extends UnicastRemoteObject implements StabilizerManagerInterface{
-    private HashMap<String, ProcessorHeartbeat> processorsAvailable = new HashMap<>();
-    private Thread multicastReceiver;
-    protected MulticastSocket socket = null;
-    protected byte[] buf = new byte[1024];
-    private long timeDiffer = 30;
+    private ConcurrentHashMap<String, ProcessorHeartbeat> processorsAvailable = new ConcurrentHashMap<>();
+    private final long timeDiffer = 30;
 
     protected StabilizerManager() throws RemoteException {
 
-        multicastReceiver = (new Thread(() -> {
+        Thread multicastReceiver = (new Thread(() -> {
             try {
-                socket = new MulticastSocket(4446);
+                byte[] buf = new byte[1024];
+                MulticastSocket socket = new MulticastSocket(4446);
                 InetAddress group = InetAddress.getByName("230.0.0.0");
                 socket.joinGroup(group);
                 while (true) {
@@ -65,9 +64,17 @@ public class StabilizerManager extends UnicastRemoteObject implements Stabilizer
         return addressProcessor;
     };
 
-    private void manageHeartbeatsProcessors(ProcessorHeartbeat heartbeat){
-        if (heartbeat.getType().equals("setup") || heartbeat.getType().equals("heartbeat")) {
-            processorsAvailable.put(heartbeat.getAddress(), heartbeat);
+    private void manageHeartbeatsProcessors(ProcessorHeartbeat heartbeat) throws IOException, NotBoundException {
+        if (heartbeat.getType().equals("setup")) processorsAvailable.put(heartbeat.getAddress(), heartbeat);
+        else if(heartbeat.getType().equals("heartbeat")){
+            if(processorsAvailable.get(heartbeat.getAddress()) != null){
+                processorsAvailable.put(heartbeat.getAddress(), heartbeat);
+                processorsAvailable.put(heartbeat.getAddress(), HeartbeatsUtils.setProcessorAvailable(heartbeat, processorsAvailable.get(heartbeat.getAddress())));
+            }
+            else{
+                ScriptListInterface bestProcessor  = (ScriptListInterface) Naming.lookup(bestProcessor());
+                this.processorsAvailable = bestProcessor.getProcessorsAvailableList();
+            }
         }
 
     }

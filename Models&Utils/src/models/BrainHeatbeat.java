@@ -6,8 +6,8 @@ import java.util.UUID;
 
 public class BrainHeatbeat extends Heartbeat implements Serializable {
     private ArrayList<UUID> scriptsID;
-    private boolean isLast;
     private Model retrievedModel;
+    private UUID modelId;
 
     public BrainHeatbeat(String address, String type, ArrayList<UUID> scriptsID) {
         super(address, type);
@@ -20,10 +20,14 @@ public class BrainHeatbeat extends Heartbeat implements Serializable {
         this.retrievedModel = retrievedModel;
     }
 
+    public BrainHeatbeat(String address, String type, UUID modelId){
+        super(address, type);
+        this.modelId = modelId;
+    }
+
     public BrainHeatbeat(String address, String type, ArrayList<UUID> scriptsID, boolean isLast) {
         super(address, type);
         this.scriptsID = scriptsID;
-        this.isLast = isLast;
     }
 
     public ArrayList<UUID> getScriptsID() {
@@ -34,14 +38,6 @@ public class BrainHeatbeat extends Heartbeat implements Serializable {
         this.scriptsID = scriptsID;
     }
 
-    public boolean isLast() {
-        return isLast;
-    }
-
-    public void setLast(boolean last) {
-        isLast = last;
-    }
-
     public Model getRetrievedModel() {
         return retrievedModel;
     }
@@ -49,4 +45,8 @@ public class BrainHeatbeat extends Heartbeat implements Serializable {
     public void setRetrievedModel(Model retrievedModel) {
         this.retrievedModel = retrievedModel;
     }
+
+    public UUID getModelId() {return modelId;}
+
+    public void setModelId(UUID modelId) {this.modelId = modelId;}
 }

@@ -1,0 +1,8 @@
+<component name="ArtifactManager">
+  <artifact type="jar" name="Stabilizer_Interfaces">
+    <output-path>$PROJECT_DIR$/out/artifacts/Stabilizer_Interfaces</output-path>
+    <root id="archive" name="Stabilizer_Interfaces.jar">
+      <element id="file-copy" path="$PROJECT_DIR$/out/production/Stabilizer/StabilizerManagerInterface.class" />
+    </root>
+  </artifact>
+</component>

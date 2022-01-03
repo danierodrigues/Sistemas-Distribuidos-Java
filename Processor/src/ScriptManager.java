@@ -1,8 +1,7 @@
-import models.BrainHeatbeat;
-import models.Model;
-import models.ProcessorHeartbeat;
-import models.RestoreTasks;
-import models.Script;
+import models.*;
+import utils.HeartbeatsUtils;
+import utils.MulticastPublisher;
+
 import javax.management.Attribute;
 import javax.management.AttributeList;
 import javax.management.MBeanServer;
@@ -12,37 +11,42 @@ import java.lang.management.ManagementFactory;
 import java.net.DatagramPacket;
 import java.net.InetAddress;
 import java.net.MulticastSocket;
-import java.rmi.Naming;
 import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
 import java.rmi.server.UnicastRemoteObject;
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.atomic.AtomicLong;
 
 import static java.lang.Double.NaN;
 
 public class ScriptManager extends UnicastRemoteObject implements ScriptListInterface {
-    private Queue<Script> queue = new LinkedList<>();
-    private HashMap<String, ProcessorHeartbeat> processorsAvailable = new HashMap<>();
-    private HashMap<String, RestoreTasks> processorsToRestore = new HashMap<>();
+    private ConcurrentLinkedQueue<Script> queue = new ConcurrentLinkedQueue<>();
+    private ConcurrentHashMap<String, ProcessorHeartbeat> processorsAvailable = new ConcurrentHashMap<>();
+    private ConcurrentHashMap<String, RestoreTasks> processorsToRestore = new ConcurrentHashMap<>();
     private Thread cpuCalculateThread = null;
     private Thread executeRequestThread;
     private Thread multicastReceiver;
-    private double cpuUsagePercentage = 100;
-    private double cpuMaxUsage = 95;
-    private FtpClient ftpClient;
+    private AtomicLong cpuUsagePercentage = new AtomicLong(100);
+    private final long cpuMaxUsage = 95;
+    private final FtpClient ftpClient = new FtpClient(Processor.server, Processor.port, Processor.user, Processor.password);;
     private Process process;
-    private MulticastPublisher multicastPublisher;
+    private MulticastPublisher multicastPublisher = new MulticastPublisher("230.0.0.0", 4446);;
     private String heartbeatType = "setup";
     private final int processorPort = Processor.processorPort;
-    protected MulticastSocket socket = null;
-    protected byte[] buf = new byte[1024];
-    private long timeDifferRequests = 60;
+    private final String processorAddress = "rmi://localhost:" + this.processorPort + "/scripts";
+    private final long timeDifferRequests = 60;
+    private ArrayList<UUID> doneTasks = new ArrayList<>();
+    private ConcurrentHashMap<UUID, Script> newsTasks = new ConcurrentHashMap<>();
+    private ConcurrentHashMap<UUID, Model> modelsToAdd = new ConcurrentHashMap<>();
 
     protected ScriptManager() throws RemoteException {
         multicastReceiver = (new Thread(() -> {
             try {
-                socket = new MulticastSocket(4446);
+                byte[] buf = new byte[1024];
+                MulticastSocket socket = new MulticastSocket(4446);
                 InetAddress group = InetAddress.getByName("230.0.0.0");
                 socket.joinGroup(group);
                 while (true) {
@@ -62,6 +66,9 @@ public class ScriptManager extends UnicastRemoteObject implements ScriptListInte
                     if(messageClass instanceof BrainHeatbeat){
                         manageHeartbeatsBrains((BrainHeatbeat) messageClass);
                     }
+                    if(messageClass instanceof StabilizerHeartbeat){
+                        manageHeartbeatsStabilizer((StabilizerHeartbeat) messageClass);
+                    }
 
                     executeOutdatedProcessors();
 
@@ -73,28 +80,27 @@ public class ScriptManager extends UnicastRemoteObject implements ScriptListInte
         }));
         multicastReceiver.start();
 
-        multicastPublisher = new MulticastPublisher();
-        ftpClient = new FtpClient(Processor.server, Processor.port, Processor.user, Processor.password);
+
         cpuCalculateThread = (new Thread(() -> {
-            while(cpuCalculateThread.isAlive()){
-                try {
-                    calculateCPU();
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
-                try {
-                    Thread.sleep(5000);
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
+
+            try {
+                calculateCPU();
+            } catch (Exception e) {
+                e.printStackTrace();
             }
+            try {
+                Thread.sleep(5000);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+            cpuCalculateThread.run();
 
         }));
 
         cpuCalculateThread.start();
 
         executeRequestThread = (new Thread(() -> {
-            while(this.cpuUsagePercentage <= cpuMaxUsage && queue.size() > 0 ){
+            while( this.cpuUsagePercentage .longValue()<= cpuMaxUsage && queue.size() > 0 ){
                 try {
                     executeRequest(queue.peek());
                     queue.remove();
@@ -123,8 +129,9 @@ public class ScriptManager extends UnicastRemoteObject implements ScriptListInte
             System.out.println(uuid);
             script.setUuid(uuid);
 
-            if (this.cpuUsagePercentage > cpuMaxUsage || this.cpuUsagePercentage == NaN) {
+            if (this.cpuUsagePercentage.longValue() > cpuMaxUsage || this.cpuUsagePercentage.longValue() == NaN) {
                 queue.add(script);
+                newsTasks.put(script.getUuid(), script);
             } else {
                 executeRequest(script);
             }
@@ -136,7 +143,7 @@ public class ScriptManager extends UnicastRemoteObject implements ScriptListInte
     };
 
     public void resumeScripts(String processorAddress) throws IOException {
-        ArrayList<Script> tasksToProcess = processorsAvailable.get(processorAddress).getTasks();
+        ArrayList<Script> tasksToProcess = processorsAvailable.get(processorAddress).getNewsTasks();
         ArrayList<UUID> scriptsID = new ArrayList<UUID>();
         tasksToProcess.forEach(script -> {
             scriptsID.add(script.getUuid());
@@ -150,17 +157,24 @@ public class ScriptManager extends UnicastRemoteObject implements ScriptListInte
 
     }
 
-    private void calculateCPU() throws Exception {
-        this.cpuUsagePercentage = getProcessCpuLoad();
+    public ConcurrentHashMap<String, ProcessorHeartbeat> getProcessorsAvailableList() throws IOException{
+        return processorsAvailable;
+    }
 
-        ProcessorHeartbeat heartbeat = new ProcessorHeartbeat("rmi://localhost:" + this.processorPort + "/scripts", this.heartbeatType, this.cpuUsagePercentage,new ArrayList(queue));
+    public Model getModelToSave(UUID modelID) throws IOException{
+        return modelsToAdd.get(modelID);
+    }
+
+    private void calculateCPU() throws Exception {
+        this.cpuUsagePercentage = new AtomicLong((long) getProcessCpuLoad());
+
+        ProcessorHeartbeat heartbeat = new ProcessorHeartbeat(this.processorAddress, this.heartbeatType, this.cpuUsagePercentage.longValue(), doneTasks, new ArrayList<>(newsTasks.values()));
         this.heartbeatType = "heartbeat";
 
         multicastPublisher.publishProcessorMessage(heartbeat);
     }
 
     private void executeRequest(Script script) throws IOException, InterruptedException, NotBoundException {
-        ModelManagerInterface brain = null;
 
         this.ftpClient.open();
         this.ftpClient.downloadFile(script.getFileLocation(), script.getFileLocation());
@@ -186,10 +200,13 @@ public class ScriptManager extends UnicastRemoteObject implements ScriptListInte
         }
 
         ftpClient.close();
-
-        Model model = new Model( script.getUuid(), "rmi://localhost:" + this.processorPort + "/scripts", output.toString());
-        brain = (ModelManagerInterface) Naming.lookup("rmi://localhost:2023/ModelManager");
-        brain.addModel(model);
+        synchronized(this) {
+            doneTasks.add(script.getUuid());
+        }
+        Model model = new Model( script.getUuid(), this.processorAddress, output.toString());
+        modelsToAdd.put(model.getProcessID(), model);
+        BrainHeatbeat heartbeat = new BrainHeatbeat(this.processorAddress, "can_add_model", model.getProcessID());
+        multicastPublisher.publishBrainMessage(heartbeat);
     }
 
     private static double getProcessCpuLoad() throws Exception {
@@ -207,9 +224,17 @@ public class ScriptManager extends UnicastRemoteObject implements ScriptListInte
         return ((int)(value * 1000) / 10.0);
     }
 
-    private void manageHeartbeatsProcessors(ProcessorHeartbeat heartbeat){
-        if (heartbeat.getType().equals("setup") || heartbeat.getType().equals("heartbeat")) {
-            processorsAvailable.put(heartbeat.getAddress(), heartbeat);
+    private void manageHeartbeatsStabilizer(StabilizerHeartbeat heartbeat){
+        if (heartbeat.getType().equals("confirmation")) {
+            heartbeat.getConfirmationDoneList().forEach(uuid -> {
+                synchronized(this) {
+                    doneTasks.remove(uuid);
+                }
+            });
+
+            heartbeat.getConfirmationNewsList().forEach(uuid -> {
+                newsTasks.remove(uuid);
+            });
         }
     }
 
@@ -225,12 +250,15 @@ public class ScriptManager extends UnicastRemoteObject implements ScriptListInte
                     scriptsID.remove(uuid);
                 }
             });
-            if(heartbeat.isLast()){
-                addToQueueRequests( scriptsID, tasks);
-                processorsToRestore.remove(heartbeat.getAddress());
-            }else{
-                processorsToRestore.get(heartbeat.getAddress()).setScriptID(scriptsID);
-            }
+            processorsToRestore.get(heartbeat.getAddress()).setScriptID(scriptsID);
+        }
+    }
+
+    private void manageHeartbeatsProcessors(ProcessorHeartbeat heartbeat){
+        if (heartbeat.getType().equals("setup")) {
+            processorsAvailable.put(heartbeat.getAddress(), heartbeat);
+        } else if(heartbeat.getType().equals("heartbeat")){
+            processorsAvailable.put(heartbeat.getAddress(), HeartbeatsUtils.setProcessorAvailable(heartbeat, processorsAvailable.get(heartbeat.getAddress())));
         }
     }
 

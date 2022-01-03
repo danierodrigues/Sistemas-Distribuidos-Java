@@ -29,7 +29,7 @@ public class Client {
                 }
             });
             t.start();
-            Thread.sleep(7000);
+            Thread.sleep(10000);
 
 
             ftpClient = (FtpClientInterface) Naming.lookup("rmi://localhost:2025/ftpClient");
