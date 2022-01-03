@@ -37,7 +37,5 @@ public class RestoreTasks {
         return dateTime;
     }
 
-    public void setDateTime(LocalDateTime dateTime) {
-        this.dateTime = dateTime;
-    }
+    public void setDateTime(LocalDateTime dateTime) {this.dateTime = dateTime;}
 }

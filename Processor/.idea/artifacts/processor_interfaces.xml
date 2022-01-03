@@ -1,0 +1,9 @@
+<component name="ArtifactManager">
+  <artifact type="jar" name="processor.interfaces">
+    <output-path>$PROJECT_DIR$/out/artifacts/processor_interfaces</output-path>
+    <root id="archive" name="processor.interfaces.jar">
+      <element id="file-copy" path="$PROJECT_DIR$/out/production/Processor/ScriptListInterface.class" />
+      <element id="file-copy" path="$PROJECT_DIR$/out/production/Processor/FtpClientInterface.class" />
+    </root>
+  </artifact>
+</component>

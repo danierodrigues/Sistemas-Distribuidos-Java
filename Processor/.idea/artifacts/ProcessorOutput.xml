@@ -5,10 +5,8 @@
       <element id="module-output" name="Processor" />
       <element id="file-copy" path="$PROJECT_DIR$/../Stabilizer/out/production/Stabilizer/Stabilizer.class" />
       <element id="file-copy" path="$PROJECT_DIR$/../Stabilizer/out/production/Stabilizer/StabilizerManager.class" />
-      <element id="file-copy" path="$PROJECT_DIR$/../Stabilizer/out/production/Stabilizer/StabilizerManagerInterface.class" />
       <element id="file-copy" path="$PROJECT_DIR$/../Brain/out/production/Brain/Brain.class" />
       <element id="file-copy" path="$PROJECT_DIR$/../Brain/out/production/Brain/ModelManager.class" />
-      <element id="file-copy" path="$PROJECT_DIR$/../Brain/out/production/Brain/ModelManagerInterface.class" />
     </root>
   </artifact>
 </component>

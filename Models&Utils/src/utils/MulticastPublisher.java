@@ -1,3 +1,5 @@
+package utils;
+
 import models.BrainHeatbeat;
 import models.ProcessorHeartbeat;
 
@@ -10,12 +12,20 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 
 public class MulticastPublisher {
+    private final String address;
+    private final int port;
+
+    public MulticastPublisher(String address, int port){
+        this.address = address;
+        this.port = port;
+    }
+
     public void multicast(byte[] buf) throws IOException {
         DatagramSocket socket = new DatagramSocket();
-        InetAddress group = InetAddress.getByName("230.0.0.0");
+        InetAddress group = InetAddress.getByName(this.address);
 
         DatagramPacket packet
-                = new DatagramPacket(buf, buf.length, new InetSocketAddress(group, 4446));
+                = new DatagramPacket(buf, buf.length, new InetSocketAddress(group,this.port));
         socket.send(packet);
 
         socket.close();
